@@ -1,5 +1,6 @@
 {
   "name": "CineVault",
   "description": "An AI-powered tool that analyzes movies using real-time data from IMDb, Letterboxd, and Metacritic to determine if they are suitable for your movie night group.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
