@@ -137,6 +137,7 @@ export interface RecommendationRequirements {
   pacing: string;
   languages: string[];
   customDescription: string;
+  customGenre?: string;
   excludedMovies?: string[];
 }
 

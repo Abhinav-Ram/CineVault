@@ -10,7 +10,7 @@ interface RecommendationTabProps {
   replacingMap?: Record<string, boolean>;
 }
 
-const GENRES = ["Action", "Comedy", "Horror", "Thriller", "Sci-Fi", "Drama", "Romance", "Documentary", "Animated", "Mystery"];
+const STANDARD_GENRES = ["Action", "Comedy", "Horror", "Thriller", "Sci-Fi", "Drama", "Romance", "Documentary", "Animated", "Mystery"];
 const COMPANIES = ["Solo", "Family", "Friends", "Cinephiles/Critics"];
 const PACING = ["Fast & Furious", "Balanced", "Slow Burn"];
 const LANGUAGES = ["Any Language", "English", "French", "German", "Hindi", "Italian", "Japanese", "Kannada", "Korean", "Malayalam", "Mandarin", "Portuguese", "Spanish", "Tamil", "Telugu"].sort((a, b) => a === "Any Language" ? -1 : b === "Any Language" ? 1 : a.localeCompare(b));
@@ -24,6 +24,7 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
     customDescription: ''
   });
 
+  const [customGenre, setCustomGenre] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -63,10 +64,20 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
   };
 
   const toggleGenre = (genre: string) => {
-    setFormData(prev => ({
-      ...prev,
-      genres: prev.genres.includes(genre) ? prev.genres.filter(g => g !== genre) : [...prev.genres, genre]
-    }));
+    setFormData(prev => {
+      if (genre === "Any Genre") {
+        return {
+          ...prev,
+          genres: prev.genres.includes("Any Genre") ? [] : ["Any Genre"]
+        };
+      }
+      const withoutAny = prev.genres.filter(g => g !== "Any Genre");
+      const isSelected = withoutAny.includes(genre);
+      return {
+        ...prev,
+        genres: isSelected ? withoutAny.filter(g => g !== genre) : [...withoutAny, genre]
+      };
+    });
   };
 
   const toggleLanguage = (lang: string) => {
@@ -86,7 +97,18 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onGetRecommendations(formData);
+    const finalGenres = formData.genres.map(g => {
+      if (g === "Custom Genre") {
+        return customGenre.trim() ? customGenre.trim() : "Custom Genre";
+      }
+      return g;
+    });
+
+    onGetRecommendations({
+      ...formData,
+      genres: finalGenres,
+      customGenre: customGenre.trim() || undefined
+    });
   };
 
   if (results) {
@@ -157,7 +179,7 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
         <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
           <div ref={pdfRef} className="pdf-template">
             <h1>Cine-Vault Picks</h1>
-            <p style={{ color: '#666' }}>Recommendations based on: {formData.genres.join(', ')} • {formData.company}</p>
+            <p style={{ color: '#666' }}>Recommendations based on: {formData.genres.map(g => g === 'Custom Genre' && customGenre.trim() ? customGenre.trim() : g).join(', ')} • {formData.company}</p>
             
             {results.map((group, gIdx) => (
               <div key={gIdx} style={{ marginTop: '30px' }}>
@@ -185,12 +207,46 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
         <div className="mb-8">
           <label className="block text-black text-sm font-black mb-3 uppercase tracking-wider">Which vibes are we feeling?</label>
           <div className="flex flex-wrap gap-2">
-            {GENRES.map(genre => (
-              <button key={genre} type="button" onClick={() => toggleGenre(genre)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 border-black ${formData.genres.includes(genre) ? 'bg-black text-white shadow-lg' : 'bg-white text-black hover:bg-gray-100'}`}>
+            <button
+              type="button"
+              onClick={() => toggleGenre("Any Genre")}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 border-black ${formData.genres.includes("Any Genre") ? 'bg-black text-white shadow-lg' : 'bg-white text-black hover:bg-gray-100'}`}
+            >
+              Any Genre
+            </button>
+            {STANDARD_GENRES.map(genre => (
+              <button
+                key={genre}
+                type="button"
+                onClick={() => toggleGenre(genre)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 border-black ${formData.genres.includes(genre) ? 'bg-black text-white shadow-lg' : 'bg-white text-black hover:bg-gray-100'}`}
+              >
                 {genre}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => toggleGenre("Custom Genre")}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border-2 border-black ${formData.genres.includes("Custom Genre") ? 'bg-black text-white shadow-lg' : 'bg-white text-black hover:bg-gray-100'}`}
+            >
+              + Custom Genre
+            </button>
           </div>
+
+          {formData.genres.includes("Custom Genre") && (
+            <div className="mt-3.5 animate-fade-in">
+              <input
+                type="text"
+                value={customGenre}
+                onChange={(e) => setCustomGenre(e.target.value)}
+                placeholder="Enter custom genre (optional, e.g. Cyberpunk, Neo-Noir, Period Drama)..."
+                className="w-full bg-white border-2 border-black rounded-xl px-3.5 py-2 text-black text-sm focus:outline-none focus:ring-2 focus:ring-black/20 font-bold placeholder:text-black/40"
+              />
+              <p className="text-[11px] text-black/60 font-semibold mt-1.5 pl-1">
+                Optional: enter specific subgenres, tropes, or niche vibes
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -233,7 +289,7 @@ export const RecommendationTab: React.FC<RecommendationTabProps> = ({ onGetRecom
 
         <textarea className="w-full bg-white border-2 border-black rounded-xl px-2 py-1.5 text-black focus:outline-none focus:ring-2 focus:ring-black/20 h-24 mb-8 font-handwriting text-2xl" placeholder="Anything else? (Optional)" value={formData.customDescription} onChange={(e) => setFormData(p => ({...p, customDescription: e.target.value}))} />
 
-        <button type="submit" disabled={isLoading || formData.genres.length === 0} className="w-full bg-black hover:bg-gray-900 py-4 rounded-xl font-bold text-[#FFD700] shadow-xl disabled:opacity-50 transition-all">
+        <button type="submit" disabled={isLoading || (formData.genres.length === 0 && !customGenre.trim())} className="w-full bg-black hover:bg-gray-900 py-4 rounded-xl font-bold text-[#FFD700] shadow-xl disabled:opacity-50 transition-all">
           {isLoading ? 'Curating Your List...' : 'Get Top Recommendations'}
         </button>
       </form>
